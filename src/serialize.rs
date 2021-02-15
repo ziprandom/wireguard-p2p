@@ -1,8 +1,8 @@
-use std::time::Duration;
-use std::time::SystemTime;
 use std::net::Ipv6Addr;
 use std::net::SocketAddr;
 use std::net::SocketAddrV6;
+use std::time::Duration;
+use std::time::SystemTime;
 
 use bytes::Buf;
 use bytes::BufMut;
@@ -14,30 +14,30 @@ pub fn deserialize(buf: impl AsRef<[u8]>) -> Option<(SystemTime, SocketAddr)> {
     let mut buf = buf.as_ref();
 
     if buf.remaining() < std::mem::size_of::<u16>() {
-        return None
+        return None;
     }
 
     let version = 0x0001;
     if buf.get_u16() != version {
         println!("b {}", buf.remaining());
-        return None
+        return None;
     }
 
     if buf.remaining() < std::mem::size_of::<u64>() {
-        return None
+        return None;
     }
 
     let time = buf.get_u64();
     let time = SystemTime::UNIX_EPOCH + Duration::from_secs(time);
 
     if buf.remaining() < std::mem::size_of::<u128>() {
-        return None
+        return None;
     }
 
     let ip = buf.get_u128().into();
 
     if buf.remaining() < std::mem::size_of::<u16>() {
-        return None
+        return None;
     }
 
     let port = buf.get_u16();
@@ -52,11 +52,13 @@ pub fn serialize(addr: Option<SocketAddr>) -> bytes::BytesMut {
     let version = 0x0001;
     buf.put_u16(version);
 
-    let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("SytemTime error");
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("SytemTime error");
     let now = now.as_secs();
     buf.put_u64(now);
 
-    let addr = addr.unwrap_or((Ipv6Addr::UNSPECIFIED, 0).into());
+    let addr = addr.unwrap_or_else(|| (Ipv6Addr::UNSPECIFIED, 0).into());
     let addr_v6 = addr.into_ipv6();
 
     buf.put_u128((*addr_v6.ip()).into());

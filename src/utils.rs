@@ -1,35 +1,37 @@
-use std::io;
+use std::collections::hash_map::Entry;
 use std::future::Future;
+use std::io;
 use std::net::SocketAddr;
 use std::net::SocketAddrV6;
-use std::collections::hash_map::Entry;
 use std::pin::Pin;
 
-use bytes::Bytes;
-use futures::StreamExt;
-use futures::sink::SinkExt;
-use futures::sink::SinkMapErr;
-use futures::channel::mpsc;
-use futures::stream::TryUnfold;
-use async_trait::async_trait;
 use async_std::net::UdpSocket;
 use async_std::sync::Arc;
 use async_std::task;
+use async_trait::async_trait;
+use bytes::Bytes;
+use futures::channel::mpsc;
+use futures::sink::SinkExt;
+use futures::sink::SinkMapErr;
+use futures::stream::TryUnfold;
+use futures::StreamExt;
 
-use ansi_term::Colour;
 use crate::crypto::PublicKey;
+use ansi_term::Colour;
 use futures::channel::mpsc::SendError;
 
 #[async_trait]
 pub trait OrTryInsertWithAsync<'a, V: Send> {
     async fn or_try_insert_with_async<E, F>(self, default: F) -> Result<&'a mut V, E>
-        where F: Send + Future<Output=Result<V, E>>;
+    where
+        F: Send + Future<Output = Result<V, E>>;
 }
 
 #[async_trait]
 impl<'a, K: Send, V: Send> OrTryInsertWithAsync<'a, V> for Entry<'a, K, V> {
     async fn or_try_insert_with_async<E, F>(self, default: F) -> Result<&'a mut V, E>
-        where F: Send + Future<Output=Result<V, E>>
+    where
+        F: Send + Future<Output = Result<V, E>>,
     {
         match self {
             Entry::Occupied(v) => Ok(v.into_mut()),
@@ -86,7 +88,13 @@ impl UdpSink for Arc<UdpSocket> {
                 //println!("{} fwd out {} bytes to {}", Colour::White.dimmed().paint("FWD"), pkt.len(), peer);
                 // TODO network unreachable
                 if let Err(e) = self.as_ref().send_to(&pkt[..], peer).await {
-                    eprintln!("{} inet send failed {} bytes to {}: {}", Colour::Red.paint("FWD"), pkt.len(), peer, e);
+                    eprintln!(
+                        "{} inet send failed {} bytes to {}: {}",
+                        Colour::Red.paint("FWD"),
+                        pkt.len(),
+                        peer,
+                        e
+                    );
                 }
             }
             panic!("fwd out failed");
@@ -109,8 +117,7 @@ impl UdpSocketSplit for UdpSocket {
     type Sender = mpsc::UnboundedSender<Self::Item>;
     type Receiver = mpsc::UnboundedReceiver<Self::Item>;
 
-    fn split(self) -> (Self::Sender, (Self::Receiver, Self::Receiver))
-    {
+    fn split(self) -> (Self::Sender, (Self::Receiver, Self::Receiver)) {
         let inet_sock1 = Arc::new(self);
         let inet_sock2 = inet_sock1.clone();
 
@@ -127,33 +134,28 @@ impl UdpSocketSplit for UdpSocket {
     }
 }
 
-
-
 pub trait UdpSocketToStream {
     type Ok;
     type ReturnValue;
 
-    fn into_stream(self) ->
-        TryUnfold<
-            Self,
-            Box<dyn Send + FnMut(Self) -> Self::ReturnValue>,
-            Self::ReturnValue
-        >
-        where Self: Sized;
+    #[allow(clippy::clippy::type_complexity)]
+    fn into_stream(
+        self,
+    ) -> TryUnfold<Self, Box<dyn Send + FnMut(Self) -> Self::ReturnValue>, Self::ReturnValue>
+    where
+        Self: Sized;
 }
 
 impl UdpSocketToStream for Arc<UdpSocket> {
     type Ok = Option<((Bytes, SocketAddr), Self)>;
-    type ReturnValue = Pin<Box<dyn Send + Future<Output=io::Result<Self::Ok>>>>;
+    type ReturnValue = Pin<Box<dyn Send + Future<Output = io::Result<Self::Ok>>>>;
 
-    fn into_stream(self) ->
-        TryUnfold<Self,
-            Box<dyn Send + FnMut(Self) -> Self::ReturnValue>,
-            Self::ReturnValue
-            >
-    {
+    #[allow(clippy::clippy::type_complexity)]
+    fn into_stream(
+        self,
+    ) -> TryUnfold<Self, Box<dyn Send + FnMut(Self) -> Self::ReturnValue>, Self::ReturnValue> {
         let func = |sock: Self| -> Self::ReturnValue {
-           Box::pin(async move {
+            Box::pin(async move {
                 let mut buf = [0u8; 4096];
 
                 let res = sock.recv_from(&mut buf).await;
@@ -180,8 +182,9 @@ pub trait SendErrorAsIoError<T, M> {
     fn map_err_as_io(self) -> M;
 }
 
-impl<T, S> SendErrorAsIoError<T, SinkMapErr<Self, Box<dyn Send + Fn(SendError) -> io::Error>>>
-    for S where S: futures::Sink<T, Error=mpsc::SendError>
+impl<T, S> SendErrorAsIoError<T, SinkMapErr<Self, Box<dyn Send + Fn(SendError) -> io::Error>>> for S
+where
+    S: futures::Sink<T, Error = mpsc::SendError>,
 {
     /// converts a Sink<Error=SendError> to a Sink<Error=io::Error>
     fn map_err_as_io(self) -> SinkMapErr<Self, Box<dyn Send + Fn(SendError) -> io::Error>> {

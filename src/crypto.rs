@@ -1,10 +1,10 @@
 use bytes::BytesMut;
 use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305 as crypto;
 
-pub use crypto::PrecomputedKey;
-pub use crypto::SecretKey;
-pub use crypto::PublicKey;
 pub use crypto::precompute;
+pub use crypto::PrecomputedKey;
+pub use crypto::PublicKey;
+pub use crypto::SecretKey;
 
 pub fn decrypt(key: &crypto::PrecomputedKey, ciphertext: Vec<u8>) -> Result<Vec<u8>, ()> {
     if ciphertext.len() < crypto::NONCEBYTES {

@@ -1277,8 +1277,7 @@ dependencies = [
 [[package]]
 name = "wireguard-tools-rs"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f2022cd9124cea5e47765b79c3cb7fa4bf67f16755a2e2005da1b641502826f"
+source = "git+https://github.com/manuels/wireguard-tools-rs.git?rev=9ae6125f0ced7195b122bc5655053e79fe2cbfe0#9ae6125f0ced7195b122bc5655053e79fe2cbfe0"
 dependencies = [
  "bindgen",
  "cc",

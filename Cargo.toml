@@ -13,7 +13,7 @@ sodiumoxide = "0.2.5"
 opendht = "0.4.1" #{ path = "../opendht-rs" }
 futures = "0.3.4"
 stun3489 = "0.5.0" #{ path = "../stun3489" }
-wireguard-tools-rs = "0.1.0"
+wireguard-tools-rs = { git = "https://github.com/manuels/wireguard-tools-rs.git", rev = "9ae6125f0ced7195b122bc5655053e79fe2cbfe0" }
 bytes = "0.5.4"
 ansi_term = "0.12.1"
 rand = "0.6.1"
